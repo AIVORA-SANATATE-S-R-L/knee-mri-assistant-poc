@@ -1,0 +1,28 @@
+# --- patient data and secrets: never commit ---
+*.dcm
+*.DCM
+DICOMDIR
+data/*
+!data/README.md
+!data/reference_labels_template.csv
+*key*.csv
+*.salt
+.env
+# --- images from studies (share only after privacy review, outside Git) ---
+outputs/**/*.png
+outputs/**/*.jpg
+outputs/**/*.mp4
+# --- smoke test bulk data (synthetic, regenerated) ---
+outputs/smoke_test/raw_synthetic/
+outputs/smoke_test/pseudonymised/
+outputs/smoke_test/_staged/
+outputs/smoke_test/labels.csv
+# --- model binaries ---
+*.pth
+*.pt
+*.safetensors
+# --- python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,13 @@
+# Tested 2026-10-27 with Python 3.13, torch 2.14.1, pydicom 3.0.2, opencv 5.0.0, pandas 3.0.5, numpy 2.5.3
+torch>=2.4
+torchvision>=0.19
+numpy>=1.24
+pandas>=2.0
+pydicom>=3.0
+opencv-python-headless>=4.8
+# decoders for compressed DICOM transfer syntaxes (JPEG, JPEG-LS, JPEG 2000)
+pylibjpeg>=2.0
+pylibjpeg-libjpeg>=2.1
+pylibjpeg-openjpeg>=2.3
+psutil>=5.9
+pytest>=7
