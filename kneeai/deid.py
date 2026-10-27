@@ -3,15 +3,21 @@
 Intended to be run ON THE DATA PROVIDER'S (ELDA) COMPUTER, before any data
 leaves their control. The re-identification key file stays with ELDA.
 
-This is a basic profile for an internal research demonstration. It does not
-detect text burned into pixels: every exported study and screenshot must
-still be reviewed visually.
+Profile (v0.2, value-representation based, applied at every nesting depth):
+  * person names (PN) removed; PatientName/PatientID set to the case code
+  * dates and times (DA/DT/TM) removed; age and sex kept
+  * free text (LT/ST/UT) removed
+  * listed identifying attributes (institution, accession, device...) removed
+  * private tags removed
+  * every non-standard UID (UI) remapped consistently with a secret salt, so
+    internal references stay valid but cannot be linked back to the PACS
+It does not detect text burned into pixels: every exported study and
+screenshot must still be reviewed visually.
 """
 
 from __future__ import annotations
 
 import csv
-import hashlib
 import os
 from typing import Dict, List, Tuple
 
@@ -37,21 +43,31 @@ IDENTIFYING_TAGS = [
     "PerformedProcedureStepDescription", "StudyComments", "ImageComments",
 ]
 
-DATE_TIME_TAGS = [
-    "StudyDate", "SeriesDate", "AcquisitionDate", "ContentDate", "InstanceCreationDate",
-    "PerformedProcedureStepStartDate", "StudyTime", "SeriesTime", "AcquisitionTime",
-    "ContentTime", "InstanceCreationTime", "PerformedProcedureStepStartTime",
-    "AcquisitionDateTime",
-]
-
-UID_TAGS = ["StudyInstanceUID", "SeriesInstanceUID", "SOPInstanceUID", "FrameOfReferenceUID"]
-
 # Non-image objects that often contain names or report text (screenshots, dose reports, reports)
 EXCLUDED_MODALITIES = {"SR", "OT", "DOC", "PR", "KO", "REG"}
 
 
+STANDARD_UID_ROOT = "1.2.840.10008."  # DICOM-defined UIDs (SOP classes, transfer syntaxes): keep
+TEXT_VRS = {"LT", "ST", "UT"}
+DATE_VRS = {"DA", "DT", "TM"}
+PROFILE_NAME = "kneeai pseudonymisation profile v0.2"
+
+
+def _iter_elements(ds):
+    """Yield every data element at every nesting depth."""
+    for elem in ds:
+        yield elem
+        if elem.VR == "SQ":
+            for item in elem.value or []:
+                yield from _iter_elements(item)
+
+
 def find_identifiers(study_dir: str) -> List[Tuple[str, str, str]]:
-    """Return a list of (file, attribute, 'present') for identifying data still in the study."""
+    """Return (file, attribute, finding) for anything identifying left in the study.
+
+    Searches nested sequences too. A file not processed by `deid` is always
+    reported, because original UIDs cannot be recognised from their value.
+    """
     findings = []
     for root, _d, files in os.walk(study_dir):
         for name in files:
@@ -62,18 +78,24 @@ def find_identifiers(study_dir: str) -> List[Tuple[str, str, str]]:
                 continue
             if not hasattr(ds, "SOPInstanceUID"):
                 continue
-            for tag in IDENTIFYING_TAGS:
-                if tag in ds and str(ds.data_element(tag).value).strip() not in ("", "None"):
-                    val = str(ds.data_element(tag).value).strip()
-                    if tag in ("PatientName", "PatientID") and val.startswith(os.path.basename(study_dir.rstrip("/\\"))):
-                        continue  # already replaced by the case code
-                    findings.append((path, tag, "present"))
-            for tag in DATE_TIME_TAGS:
-                if tag in ds and str(ds.data_element(tag).value).strip():
-                    findings.append((path, tag, "present"))
-            has_private = any(el.tag.is_private for el in ds)
-            if has_private:
-                findings.append((path, "private tags", "present"))
+            case_code = str(getattr(ds, "PatientID", ""))
+            processed = str(getattr(ds, "PatientIdentityRemoved", "")).upper() == "YES" and \
+                str(getattr(ds, "DeidentificationMethod", "")).startswith(PROFILE_NAME)
+            if not processed:
+                findings.append((path, "PatientIdentityRemoved/DeidentificationMethod", "not processed by kneeai deid"))
+            for elem in _iter_elements(ds):
+                kw = elem.keyword or str(elem.tag)
+                val = str(elem.value).strip() if elem.VR != "SQ" else ""
+                if elem.tag.is_private:
+                    findings.append((path, f"private tag {elem.tag}", "present"))
+                elif elem.VR == "PN" and val and val != case_code:
+                    findings.append((path, kw, "person name"))
+                elif elem.VR in DATE_VRS and val:
+                    findings.append((path, kw, "date/time"))
+                elif elem.VR in TEXT_VRS and val:
+                    findings.append((path, kw, "free text"))
+                elif kw in IDENTIFYING_TAGS and val and val != case_code:
+                    findings.append((path, kw, "identifier"))
             if str(getattr(ds, "BurnedInAnnotation", "")).upper() == "YES":
                 findings.append((path, "BurnedInAnnotation", "YES"))
             if str(getattr(ds, "Modality", "")).upper() in EXCLUDED_MODALITIES:
@@ -85,22 +107,43 @@ def _new_uid(original: str, salt: str) -> str:
     return generate_uid(entropy_srcs=[salt, original])
 
 
-def pseudonymise_study(src_dir: str, out_root: str, case_code: str, salt: str, key_file: str) -> Dict[str, int]:
-    """Copy one study to out_root/case_code with identifiers removed.
+def _scrub(ds, salt: str) -> None:
+    """Apply the profile in place, recursively."""
+    ds.remove_private_tags()
 
-    - names / IDs replaced by the case code
-    - staff, institution, device and visit identifiers removed
-    - dates and times removed (patient age and sex kept)
-    - private tags removed
-    - UIDs replaced by new UIDs derived from a secret salt
-    - screenshots, structured reports and other non-image objects skipped
-    - original StudyInstanceUID -> case code written to key_file (keep at ELDA)
+    def cb(dataset, elem):
+        kw = elem.keyword or ""
+        if elem.VR in ("PN",) or elem.VR in DATE_VRS or elem.VR in TEXT_VRS or kw in IDENTIFYING_TAGS:
+            del dataset[elem.tag]
+        elif elem.VR == "UI" and elem.value:
+            vals = elem.value if isinstance(elem.value, (list, pydicom.multival.MultiValue)) else [elem.value]
+            new = [v if str(v).startswith(STANDARD_UID_ROOT) else _new_uid(str(v), salt) for v in vals]
+            elem.value = new if len(new) > 1 else new[0]
+
+    ds.walk(cb)
+
+
+def _cases_in_key(key_file: str) -> set:
+    if not os.path.exists(key_file):
+        return set()
+    with open(key_file, encoding="utf-8") as fh:
+        return {row[0] for row in csv.reader(fh) if row}
+
+
+def pseudonymise_study(src_dir: str, out_root: str, case_code: str, salt: str, key_file: str) -> Dict[str, int]:
+    """Copy one study to out_root/case_code with the profile above applied.
+
+    Screenshots, structured reports and other non-image objects are skipped.
+    The original StudyInstanceUID -> case code mapping goes to key_file, which
+    stays with the data provider.
     """
     if not salt or len(salt) < 12:
         raise ValueError("Use a secret salt of at least 12 characters and keep it at ELDA.")
     out_dir = os.path.join(out_root, case_code)
     if os.path.exists(out_dir) and os.listdir(out_dir):
         raise FileExistsError(f"Output folder already exists and is not empty: {out_dir}")
+    if case_code in _cases_in_key(key_file):
+        raise ValueError(f"Case code {case_code} is already used in {key_file}; choose a new code.")
 
     series = index_study(src_dir)
     counts = {"series": 0, "files": 0, "skipped_non_image": 0}
@@ -116,19 +159,13 @@ def pseudonymise_study(src_dir: str, out_root: str, case_code: str, salt: str, k
         for f_idx, path in enumerate(sorted(info.files), start=1):
             ds = pydicom.dcmread(path, force=True)
             original_study_uids.add(str(getattr(ds, "StudyInstanceUID", "")))
-            for tag in IDENTIFYING_TAGS + DATE_TIME_TAGS:
-                if tag in ds:
-                    delattr(ds, tag)
-            ds.remove_private_tags()
+            _scrub(ds, salt)
             ds.PatientName = case_code
             ds.PatientID = case_code
-            for tag in UID_TAGS:
-                if tag in ds:
-                    setattr(ds, tag, _new_uid(str(ds.data_element(tag).value), salt))
             if hasattr(ds, "file_meta") and "SOPInstanceUID" in ds:
                 ds.file_meta.MediaStorageSOPInstanceUID = ds.SOPInstanceUID
             ds.PatientIdentityRemoved = "YES"
-            ds.DeidentificationMethod = "kneeai basic pseudonymisation profile v0.1"
+            ds.DeidentificationMethod = PROFILE_NAME
             ds.save_as(os.path.join(s_dir, f"{f_idx:04d}.dcm"))
             counts["files"] += 1
 
@@ -137,7 +174,7 @@ def pseudonymise_study(src_dir: str, out_root: str, case_code: str, salt: str, k
     with open(key_file, "a", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         if new_file:
-            w.writerow(["case_code", "original_StudyInstanceUID", "source_folder_sha1"])
+            w.writerow(["case_code", "original_StudyInstanceUID"])
         for uid in sorted(original_study_uids):
-            w.writerow([case_code, uid, hashlib.sha1(os.path.abspath(src_dir).encode()).hexdigest()])
+            w.writerow([case_code, uid])
     return counts
