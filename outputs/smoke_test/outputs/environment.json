@@ -1,0 +1,18 @@
+{
+  "recorded_at": "2026-10-27T12:01:29+02:00",
+  "os": "Linux-6.18.44-fc-v165-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "processor": "x86_64",
+  "python": "3.13.17",
+  "python_executable_arch": "64bit",
+  "torch": "2.14.1+cu130",
+  "torchvision": "0.29.1+cu130",
+  "cuda_available": false,
+  "gpu": "none (CPU inference)",
+  "numpy": "2.5.3",
+  "pandas": "3.0.5",
+  "pydicom": "3.0.2",
+  "opencv": "5.0.0",
+  "project_commit": "a34f18f2164a8b6b29ad66c14cb04e4edade97ea",
+  "ram_gb": 8.4
+}

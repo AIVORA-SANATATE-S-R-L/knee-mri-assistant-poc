@@ -1,0 +1,166 @@
+{
+  "probabilities": {
+    "ACL": 0.5336710810661316,
+    "MCL": 0.5102352499961853,
+    "Medial Meniscus": 0.5024168491363525,
+    "Lateral Meniscus": 0.5136467218399048,
+    "Medial OA": 0.5319876074790955,
+    "Lateral OA": 0.430120050907135,
+    "PF OA": 0.519633412361145,
+    "Effusion": 0.565496563911438,
+    "Synovitis": 0.5933013558387756,
+    "Baker's": 0.5535411834716797,
+    "Contusion": 0.49824807047843933,
+    "Fracture": 0.5032027363777161
+  },
+  "thresholds": {
+    "ACL": 0.05,
+    "MCL": 0.5,
+    "Medial Meniscus": 0.5,
+    "Lateral Meniscus": 0.5,
+    "Medial OA": 0.5,
+    "Lateral OA": 0.5,
+    "PF OA": 0.5,
+    "Effusion": 0.5,
+    "Synovitis": 0.5,
+    "Baker's": 0.5,
+    "Contusion": 0.5,
+    "Fracture": 0.5
+  },
+  "binary": {
+    "ACL": 1,
+    "MCL": 1,
+    "Medial Meniscus": 1,
+    "Lateral Meniscus": 1,
+    "Medial OA": 1,
+    "Lateral OA": 0,
+    "PF OA": 1,
+    "Effusion": 1,
+    "Synovitis": 1,
+    "Baker's": 1,
+    "Contusion": 0,
+    "Fracture": 1
+  },
+  "inference_seconds": 3.227,
+  "series_mask": [
+    [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "metadata_vectors": [
+    [
+      [
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  ],
+  "case_code": "SYN-001",
+  "run_label": "run2",
+  "checkpoint_sha256": "68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791",
+  "selected_series": [
+    {
+      "StudyInstanceUID": "SYN-001",
+      "SeriesInstanceUID": "S1_SAG_FLUID_FS",
+      "Anatomical_Plane": "sagittal",
+      "Fluid_Sensitive": 1,
+      "Fat_Suppression": 1,
+      "source_series_number": 2,
+      "source_description": "PD_TSE_FS_SAG",
+      "n_images": 24
+    },
+    {
+      "StudyInstanceUID": "SYN-001",
+      "SeriesInstanceUID": "S2_AX_FLUID_FS",
+      "Anatomical_Plane": "axial",
+      "Fluid_Sensitive": 1,
+      "Fat_Suppression": 1,
+      "source_series_number": 4,
+      "source_description": "PD_TSE_FS_AX",
+      "n_images": 26
+    },
+    {
+      "StudyInstanceUID": "SYN-001",
+      "SeriesInstanceUID": "S3_COR_NONFLUID_NOFS",
+      "Anatomical_Plane": "coronal",
+      "Fluid_Sensitive": 0,
+      "Fat_Suppression": 0,
+      "source_series_number": 3,
+      "source_description": "T1_TSE_COR",
+      "n_images": 22
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-10-27T12:01:29+02:00",
+  "model_commit": "a254152c1e7cf4aa1d7391cb9260d54a4185118c",
+  "pinned_sha256": "68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791",
+  "size_bytes": 152040442,
+  "sha256": "68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791",
+  "sha256_match": true,
+  "safe_load_ok": true,
+  "strict_keys_ok": true,
+  "load_report": {
+    "missing_keys": [],
+    "unexpected_keys": [],
+    "checkpoint_top_level_keys": [
+      "epoch",
+      "best_epoch",
+      "model_state_dict",
+      "optimizer_state_dict",
+      "scheduler_state_dict",
+      "best_metric",
+      "config",
+      "target_columns"
+    ]
+  },
+  "n_params": 12656716,
+  "device": "cpu",
+  "dummy_forward": {
+    "finite": true,
+    "seconds": 3.625,
+    "probabilities": {
+      "ACL": 0.5131964087486267,
+      "MCL": 0.4810028076171875,
+      "Medial Meniscus": 0.46580347418785095,
+      "Lateral Meniscus": 0.5203379392623901,
+      "Medial OA": 0.5696696043014526,
+      "Lateral OA": 0.5142072439193726,
+      "PF OA": 0.5188221335411072,
+      "Effusion": 0.5662122964859009,
+      "Synovitis": 0.5891430974006653,
+      "Baker's": 0.5050683617591858,
+      "Contusion": 0.483529269695282,
+      "Fracture": 0.5198730230331421
+    }
+  },
+  "checkpoint_training_metadata": {
+    "epoch": 1,
+    "best_epoch": 1,
+    "best_metric": 0.5
+  },
+  "note": "Dummy-input result proves only that the software executes."
+}

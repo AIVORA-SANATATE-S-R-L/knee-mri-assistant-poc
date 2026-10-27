@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-claude/4b30406b-48e5-5d57-a075-40a4062a20bc/scratchpad/knee-mri-assistant-poc/kneeai/cli.py", line 157, in cmd_run
+    raise RuntimeError(f"study still contains identifiers ({len(left)} findings, e.g. {left[0][1]}); "
+                       "pseudonymise it at ELDA first (python -m kneeai deid)")
+RuntimeError: study still contains identifiers (525 findings, e.g. PatientName); pseudonymise it at ELDA first (python -m kneeai deid)
