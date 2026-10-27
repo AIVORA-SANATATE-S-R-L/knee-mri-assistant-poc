@@ -7,6 +7,7 @@ export). Only headers are read here; pixel decoding is checked separately.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -84,25 +85,47 @@ def _classify(info: SeriesInfo, ds) -> None:
     except Exception:
         info.repetition_time = None
 
-    # Fat suppression: description keywords or scanner scan options
-    tokens = desc.replace("-", " ").replace("_", " ").split()
-    if any(w in desc for w in ("FAT SAT", "FATSAT", "SPAIR", "SPIR", "STIR", "TIRM", "DIXON W")) or "FS" in tokens or "FS" in scan_opts.replace("\\", " ").split() or "SFS" in scan_opts:
+    # Tokenise "SAG_PDFS", "pd-tse-fs", "T2 FATSAT" etc.; also split glued forms like PDFS / T2FS / PDW
+    norm = re.sub(r"[^A-Z0-9*]+", " ", desc)
+    norm = re.sub(r"\b(PD|T1|T2|DP)(FS|FSE|W|SPAIR|SPIR|TSE)\b", r"\1 \2", norm)
+    tokens = set(norm.split())
+    opts = set(re.sub(r"[^A-Z0-9]+", " ", scan_opts).split())
+
+    if tokens & {"FS", "FATSAT", "SPAIR", "SPIR", "STIR", "TIRM", "SFS", "FSAT"} or "FAT SAT" in norm \
+            or opts & {"FS", "SFS", "FSP"}:
         info.fat_suppressed = 1
     elif tokens:
         info.fat_suppressed = 0
 
-    # Fluid sensitivity: keywords first, echo time as fallback (TE >= 30 ms)
-    if any(t in tokens for t in ("PD", "PDW", "DP", "T2", "STIR", "TIRM", "DESS", "MEDIC", "MERGE")) or any(w in desc for w in ("T2", "STIR", "TIRM")):
+    # Fluid sensitivity: sequence keywords first, echo time as fallback (TE >= 30 ms)
+    if tokens & {"PD", "PDW", "DP", "T2", "T2*", "STIR", "TIRM", "DESS", "MEDIC", "MERGE", "PDWI", "T2WI"}:
         info.fluid_sensitive = 1
-    elif "T1" in desc:
+    elif tokens & {"T1", "T1W", "T1WI"}:
         info.fluid_sensitive = 0
     elif info.echo_time is not None:
         info.fluid_sensitive = 1 if info.echo_time >= 30 else 0
 
 
+def _stack_key(ds) -> str:
+    """Images of one SeriesInstanceUID can hold several stacks (orientations, Dixon
+    water/fat, multiple echoes). They must not be mixed into one volume."""
+    plane = _plane_from_iop(ds.ImageOrientationPatient) if hasattr(ds, "ImageOrientationPatient") else "unknown"
+    try:
+        iop = tuple(round(float(x), 2) for x in ds.ImageOrientationPatient)
+    except Exception:
+        iop = ()
+    image_type = "\\".join(str(x) for x in getattr(ds, "ImageType", []))[:64]
+    echo = str(getattr(ds, "EchoNumbers", ""))
+    return f"{plane}|{iop}|{image_type}|{echo}"
+
+
 def index_study(study_dir: str) -> Dict[str, SeriesInfo]:
-    """Return {SeriesInstanceUID: SeriesInfo} for every readable DICOM image under study_dir."""
+    """Return {series key: SeriesInfo} for every readable DICOM image under study_dir.
+
+    The key is the SeriesInstanceUID, suffixed with #1, #2... when one series
+    contains several stacks (different orientation, image type or echo)."""
     series: Dict[str, SeriesInfo] = {}
+    stack_ids: Dict[str, Dict[str, int]] = {}
     for root, _dirs, files in os.walk(study_dir):
         for name in files:
             if name.upper() == "DICOMDIR":
@@ -114,7 +137,12 @@ def index_study(study_dir: str) -> Dict[str, SeriesInfo]:
                 continue
             if not hasattr(ds, "SeriesInstanceUID") or not hasattr(ds, "SOPInstanceUID"):
                 continue
-            uid = str(ds.SeriesInstanceUID)
+            base_uid = str(ds.SeriesInstanceUID)
+            stack = _stack_key(ds)
+            stacks = stack_ids.setdefault(base_uid, {})
+            if stack not in stacks:
+                stacks[stack] = len(stacks)
+            uid = base_uid if stacks[stack] == 0 else f"{base_uid}#{stacks[stack]}"
             info = series.get(uid)
             if info is None:
                 try:
@@ -144,21 +172,21 @@ def index_study(study_dir: str) -> Dict[str, SeriesInfo]:
 
 
 def check_decodable(info: SeriesInfo) -> Optional[str]:
-    """Decode the middle image of a series. Returns an error message or None if OK.
+    """Decode EVERY image of a series. Returns an error message or None if all OK.
 
     The third-party loader silently replaces undecodable slices with black
-    images, so this check is required before inference.
+    images, so every slice that could be sampled must be verified.
     """
     if not info.files:
         return "series has no files"
-    path = sorted(info.files)[len(info.files) // 2]
-    try:
-        ds = pydicom.dcmread(path, force=True)
-        arr = ds.pixel_array
-        if arr.size == 0 or not np.isfinite(arr.astype(np.float32)).all():
-            return "decoded image is empty or non-finite"
-        if float(arr.max()) == float(arr.min()):
-            return "decoded image is constant (blank)"
-    except Exception as exc:  # compression codec missing, corrupt file, etc.
-        return f"pixel decode failed: {type(exc).__name__}: {exc}"
+    bad = []
+    for path in info.files:
+        try:
+            arr = pydicom.dcmread(path, force=True).pixel_array
+            if arr.size == 0 or not np.isfinite(arr.astype(np.float32)).all():
+                bad.append((path, "empty or non-finite"))
+        except Exception as exc:  # codec missing, truncated file, etc.
+            bad.append((path, f"{type(exc).__name__}: {str(exc)[:120]}"))
+    if bad:
+        return f"{len(bad)}/{len(info.files)} images cannot be decoded (first: {os.path.basename(bad[0][0])}: {bad[0][1]})"
     return None

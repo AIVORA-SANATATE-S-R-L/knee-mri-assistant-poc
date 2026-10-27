@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import tempfile
 from typing import Dict, List, Tuple
 
 import pandas as pd
@@ -92,9 +93,19 @@ def select_series(series: Dict[str, SeriesInfo], max_series: int = 6) -> Tuple[L
     return chosen, table
 
 
-def stage_study(study_dir: str, case_code: str, work_root: str, max_series: int = 6):
-    """Index, select and copy the chosen series into work_root/case_code/<Sk_LABEL>/NNNN.dcm.
+def _link_or_copy(src: str, dst: str) -> None:
+    try:
+        os.link(src, dst)  # hard link: no second copy of patient data on disk
+    except OSError:
+        shutil.copy2(src, dst)
 
+
+def stage_study(study_dir: str, case_code: str, work_root=None, max_series: int = 6, copy_files: bool = True):
+    """Index, select and stage the chosen series as <tmp>/case_code/<Sk_LABEL>/NNNN.dcm.
+
+    work_root=None uses a fresh temporary folder next to the study (same disk, so
+    hard links work). The caller removes os.path.dirname(staged) afterwards.
+    copy_files=False only indexes, selects and checks decoding (for `inspect`).
     Returns (staged_study_dir, metadata_df, selection_table, chosen_series, errors).
     """
     series = index_study(study_dir)
@@ -103,10 +114,14 @@ def stage_study(study_dir: str, case_code: str, work_root: str, max_series: int 
     if not chosen:
         errors.append("no eligible MR series found")
 
-    staged = os.path.join(work_root, case_code)
-    if os.path.exists(staged):
-        shutil.rmtree(staged)
-    os.makedirs(staged)
+    staged = None
+    if copy_files:
+        if work_root is None:
+            work_root = tempfile.mkdtemp(prefix="kneeai_stage_", dir=os.path.dirname(os.path.abspath(study_dir)))
+        else:
+            work_root = tempfile.mkdtemp(prefix="kneeai_stage_", dir=work_root)
+        staged = os.path.join(work_root, case_code)
+        os.makedirs(staged)
 
     meta_rows = []
     for k, info in enumerate(chosen, start=1):
@@ -114,10 +129,11 @@ def stage_study(study_dir: str, case_code: str, work_root: str, max_series: int 
         if err:
             errors.append(f"series {info.series_number} '{info.description}': {err}")
         folder = f"S{k}_{info.short_label()}"
-        dst = os.path.join(staged, folder)
-        os.makedirs(dst)
-        for i, src in enumerate(sorted(info.files), start=1):
-            shutil.copy2(src, os.path.join(dst, f"{i:04d}.dcm"))
+        if staged:
+            dst = os.path.join(staged, folder)
+            os.makedirs(dst)
+            for i, src in enumerate(sorted(info.files), start=1):
+                _link_or_copy(src, os.path.join(dst, f"{i:04d}.dcm"))
         meta_rows.append({
             "StudyInstanceUID": case_code,
             "SeriesInstanceUID": folder,
