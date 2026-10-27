@@ -1,4 +1,4 @@
-2026-10-27T13:14:09+02:00  verify-model status=PASSED sha256=68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791
-2026-10-27T13:14:14+02:00  run case=SYN-001 label=run1 commit=62eb882831ad172be5868a04f736da6cceaefc80 status=OK
-2026-10-27T13:14:18+02:00  run case=SYN-001 label=run2 commit=62eb882831ad172be5868a04f736da6cceaefc80 status=OK
-2026-10-27T13:14:18+02:00  run case=SYN-RAW label=refuse_check commit=62eb882831ad172be5868a04f736da6cceaefc80 status=FAILED RuntimeError: study still contains identifiers (525 findings, e.g. PatientIdentityRemoved/DeidentificationMethod); pseudonymise it at ELDA first (python -m kneeai deid)
+2026-10-27T14:04:06+02:00  verify-model status=PASSED sha256=68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791
+2026-10-27T14:04:09+02:00  run case=SYN-001 label=run1 commit=ab2a21e7adc67d9fddb18ec6dbef3bae3410c214 status=OK
+2026-10-27T14:04:11+02:00  run case=SYN-001 label=run2 commit=ab2a21e7adc67d9fddb18ec6dbef3bae3410c214 status=OK
+2026-10-27T14:04:11+02:00  run case=SYN-RAW label=refuse_check commit=ab2a21e7adc67d9fddb18ec6dbef3bae3410c214 status=FAILED RuntimeError: study still contains identifiers (525 findings, e.g. PatientIdentityRemoved/DeidentificationMethod); pseudonymise it at ELDA first (python -m kneeai deid)

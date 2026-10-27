@@ -2,7 +2,7 @@
 
 **Project:** AI assistant for knee MRI (PoCIDIF 2021–2027, Action 2.1)
 **Report date:** 2026-10-27
-**Test period:** 2026-10-27T13:14:09+02:00 to 2026-10-27T13:14:18+02:00
+**Test period:** 2026-10-27T14:04:06+02:00 to 2026-10-27T14:04:11+02:00
 **Prepared by:** [NAME, ROLE]  **Reviewed by:** [NAME, ROLE]
 
 > Research demonstration only. Model scores are experimental outputs, not diagnoses and not calibrated
@@ -29,22 +29,22 @@ reproducibly and with traceable versions.
 
 | Item | Value |
 |---|---|
-| recorded_at | 2026-10-27T13:14:05+02:00 |
-| os | Linux-6.18.44-fc-v165-x86_64-with-glibc2.39 |
-| machine | x86_64 |
-| processor | x86_64 |
-| python | 3.13.17 |
+| recorded_at | 2026-10-27T14:04:03+02:00 |
+| os | Windows-11-10.0.26200-SP0 |
+| machine | AMD64 |
+| processor | Intel64 Family 6 Model 141 Stepping 1, GenuineIntel |
+| python | 3.14.7 |
 | python_executable_arch | 64bit |
-| torch | 2.14.1+cu130 |
-| torchvision | 0.29.1+cu130 |
+| torch | 2.14.1+cpu |
+| torchvision | 0.29.1+cpu |
 | cuda_available | False |
 | gpu | none (CPU inference) |
-| numpy | 2.5.3 |
-| pandas | 3.0.5 |
+| numpy | 2.5.4 |
+| pandas | 3.1.0 |
 | pydicom | 3.0.2 |
 | opencv | 5.0.0 |
-| project_commit | 62eb882831ad172be5868a04f736da6cceaefc80 |
-| ram_gb | 8.4 |
+| project_commit | ab2a21e7adc67d9fddb18ec6dbef3bae3410c214 |
+| ram_gb | 16.9 |
 | Third-party model commit | `a254152c1e7cf4aa1d7391cb9260d54a4185118c` |
 | Checkpoint size | 152040442 bytes |
 | Checkpoint SHA-256 | `68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791` |
@@ -75,7 +75,7 @@ reproducibly and with traceable versions.
 
 | case_code | selected_series | n_series_used | total_seconds |
 |---|---|---|---|
-| SYN-001 | S1_SAG_FLUID_FS (PD_TSE_FS_SAG, 24 img); S2_AX_FLUID_FS (PD_TSE_FS_AX, 26 img); S3_COR_NONFLUID_NOFS (T1_TSE_COR, 22 img) | 3 | 4.49 |
+| SYN-001 | S1_SAG_FLUID_FS (PD_TSE_FS_SAG, 24 img); S2_AX_FLUID_FS (PD_TSE_FS_AX, 26 img); S3_COR_NONFLUID_NOFS (T1_TSE_COR, 22 img) | 3 | 2.36 |
 
 ## 7. Model outputs vs. radiologist reference (latest run)
 

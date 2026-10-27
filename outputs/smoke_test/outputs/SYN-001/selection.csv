@@ -1,5 +1,5 @@
 series_number,description,plane,fluid_sensitive,fat_suppressed,echo_time_ms,n_images,matrix,transfer_syntax,eligibility,selected_slot,series_uid
-1,localizer,sagittal,0,0,5.0,3,64x64,Explicit VR Little Endian,localizer/scout,,1.2.826.0.1.3680043.8.498.19659397450723397447999825815293613510
-2,PD_TSE_FS_SAG,sagittal,1,1,35.0,24,64x64,Explicit VR Little Endian,eligible,SAG-fluid,1.2.826.0.1.3680043.8.498.38184604116688937538151096220777357735
-3,T1_TSE_COR,coronal,0,0,12.0,22,64x64,Explicit VR Little Endian,eligible,COR-nonfluid,1.2.826.0.1.3680043.8.498.95427888862291548888973545683222288324
-4,PD_TSE_FS_AX,axial,1,1,33.0,26,64x64,Explicit VR Little Endian,eligible,AX-fluid,1.2.826.0.1.3680043.8.498.34010736043130169862715228727549987993
+1,localizer,sagittal,0,0,5.0,3,64x64,Explicit VR Little Endian,localizer/scout,,1.2.826.0.1.3680043.8.498.26679523604981725358846200631212789852
+2,PD_TSE_FS_SAG,sagittal,1,1,35.0,24,64x64,Explicit VR Little Endian,eligible,SAG-fluid,1.2.826.0.1.3680043.8.498.73936200046187687354139512575815874509
+3,T1_TSE_COR,coronal,0,0,12.0,22,64x64,Explicit VR Little Endian,eligible,COR-nonfluid,1.2.826.0.1.3680043.8.498.11557623693632822849342351704063878685
+4,PD_TSE_FS_AX,axial,1,1,33.0,26,64x64,Explicit VR Little Endian,eligible,AX-fluid,1.2.826.0.1.3680043.8.498.57341263308453812642793875242612496115

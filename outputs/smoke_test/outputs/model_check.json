@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-27T13:14:05+02:00",
+  "checked_at": "2026-10-27T14:04:03+02:00",
   "model_commit": "a254152c1e7cf4aa1d7391cb9260d54a4185118c",
   "pinned_sha256": "68bd5d3fd040fa6e4c464d99d2c7dcacaebd2a40388ec0902133d4e26be0f791",
   "size_bytes": 152040442,
@@ -25,13 +25,13 @@
   "device": "cpu",
   "dummy_forward": {
     "finite": true,
-    "seconds": 3.626,
+    "seconds": 2.284,
     "probabilities": {
       "ACL": 0.5131964087486267,
       "MCL": 0.4810028076171875,
-      "Medial Meniscus": 0.46580347418785095,
-      "Lateral Meniscus": 0.5203379392623901,
-      "Medial OA": 0.5696696043014526,
+      "Medial Meniscus": 0.4658034145832062,
+      "Lateral Meniscus": 0.5203379988670349,
+      "Medial OA": 0.5696694850921631,
       "Lateral OA": 0.5142072439193726,
       "PF OA": 0.5188221335411072,
       "Effusion": 0.5662122964859009,
