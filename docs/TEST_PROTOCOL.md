@@ -1,6 +1,6 @@
 # Test protocol – demonstration on clinical partner (ELDA) studies
 
-Version 0.1 · prepared 2026-10-27
+Version 0.2 · prepared 2026-10-27
 
 ## 0. Before touching any patient data
 
@@ -27,8 +27,10 @@ Version 0.1 · prepared 2026-10-27
 ## 3. Pseudonymise immediately
 
 ```powershell
-.\.venv\Scripts\python -m kneeai deid --input D:\ELDA_RAW\K001 --output C:\KneeDemo\pseudo --case ELDA-K001 --salt "<secret kept by ELDA>" --key-file D:\ELDA_KEY\key.csv
+.\.venv\Scripts\python -m kneeai deid --input D:\ELDA_RAW\K001 --output C:\KneeDemo\pseudo --case ELDA-K001 --key-file D:\ELDA_KEY\key.csv
 ```
+
+The command asks for the secret salt (hidden). Use the same salt for every case; ELDA keeps it.
 
 - The key file and the salt stay with ELDA, never in the repository, never sent to IT.
 - Open a few images of every series and check for burned-in names/dates. If present, exclude that series.
