@@ -41,7 +41,7 @@
     "Contusion": 0,
     "Fracture": 1
   },
-  "inference_seconds": 3.227,
+  "inference_seconds": 3.507,
   "series_mask": [
     [
       1.0,

@@ -2,7 +2,7 @@
 
 **Project:** AI assistant for knee MRI (PoCIDIF 2021–2027, Action 2.1)
 **Report date:** 2026-10-27
-**Test period:** 2026-10-27T12:01:34+02:00 to 2026-10-27T12:01:42+02:00
+**Test period:** 2026-10-27T13:14:09+02:00 to 2026-10-27T13:14:18+02:00
 **Prepared by:** [NAME, ROLE]  **Reviewed by:** [NAME, ROLE]
 
 > Research demonstration only. Model scores are experimental outputs, not diagnoses and not calibrated
@@ -19,16 +19,17 @@ reproducibly and with traceable versions.
 | Component | Origin |
 |---|---|
 | Neural network architecture and weights (`rsna-knee-mri-model`, commit `a254152c1e7c`) | Third-party, MIT-licensed repository. Not developed by the team. |
-| Pseudonymisation and identifier check (`kneeai/deid.py`) | Developed by the team |
+| Pseudonymisation and identifier check (`kneeai/deid.py`, profile v0.2) | Developed by the team |
 | Study indexing, sequence classification and explicit series selection (`kneeai/dicom_index.py`, `kneeai/series_select.py`) | Developed by the team |
 | Safe model loading, hash verification, strict key check (`kneeai/engine.py`) | Developed by the team |
 | Run recording, reference-label comparison, reproducibility check, visual output, this report (`kneeai/cli.py`, `kneeai/report.py`, `kneeai/visualize.py`) | Developed by the team |
+| Automated regression and end-to-end tests on synthetic data (`tests/`, GitHub Actions) | Developed by the team |
 
 ## 3. Environment
 
 | Item | Value |
 |---|---|
-| recorded_at | 2026-10-27T12:01:29+02:00 |
+| recorded_at | 2026-10-27T13:14:05+02:00 |
 | os | Linux-6.18.44-fc-v165-x86_64-with-glibc2.39 |
 | machine | x86_64 |
 | processor | x86_64 |
@@ -42,7 +43,7 @@ reproducibly and with traceable versions.
 | pandas | 3.0.5 |
 | pydicom | 3.0.2 |
 | opencv | 5.0.0 |
-| project_commit | a34f18f2164a8b6b29ad66c14cb04e4edade97ea |
+| project_commit | 62eb882831ad172be5868a04f736da6cceaefc80 |
 | ram_gb | 8.4 |
 | Third-party model commit | `a254152c1e7cf4aa1d7391cb9260d54a4185118c` |
 | Checkpoint size | 152040442 bytes |
@@ -74,7 +75,7 @@ reproducibly and with traceable versions.
 
 | case_code | selected_series | n_series_used | total_seconds |
 |---|---|---|---|
-| SYN-001 | S1_SAG_FLUID_FS (PD_TSE_FS_SAG, 24 img); S2_AX_FLUID_FS (PD_TSE_FS_AX, 26 img); S3_COR_NONFLUID_NOFS (T1_TSE_COR, 22 img) | 3 | 4.14 |
+| SYN-001 | S1_SAG_FLUID_FS (PD_TSE_FS_SAG, 24 img); S2_AX_FLUID_FS (PD_TSE_FS_AX, 26 img); S3_COR_NONFLUID_NOFS (T1_TSE_COR, 22 img) | 3 | 4.49 |
 
 ## 7. Model outputs vs. radiologist reference (latest run)
 
@@ -99,7 +100,7 @@ These counts describe this small demonstration set only and are **not** performa
 
 | run_label | case_code | error |
 |---|---|---|
-| refuse_check | SYN-RAW | RuntimeError: study still contains identifiers (525 findings, e.g. PatientName); pseudonymise it at ELDA first (python -m kneeai deid) |
+| refuse_check | SYN-RAW | RuntimeError: study still contains identifiers (525 findings, e.g. PatientIdentityRemoved/DeidentificationMethod); pseudonymise it at ELDA first (python -m kneeai deid) |
 
 ## 10. Limitations and findings
 
@@ -127,4 +128,4 @@ These counts describe this small demonstration set only and are **not** performa
 - `outputs/results.csv` – all runs, all targets
 - `outputs/<case>/selection.csv` – series inventory and selection per study
 - `outputs/<case>/montage_<run>.png` – exact model input slices and scores (privacy-reviewed)
-- `outputs/environment.json`, `outputs/model_check.json`
+- `outputs/environment.json`, `outputs/model_check.json`, `outputs/run_log.txt`
