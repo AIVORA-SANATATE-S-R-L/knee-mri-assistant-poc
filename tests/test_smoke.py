@@ -82,7 +82,6 @@ def run_smoke() -> None:
     make_synthetic_study(raw)
 
     cli.OUT = os.path.join(base, "outputs")
-    cli.WORK = os.path.join(base, "_staged")
     deid_root = os.path.join(base, "pseudonymised")
     cli.main(["deid", "--input", raw, "--output", deid_root, "--case", "SYN-001",
               "--salt", "synthetic-test-salt-0001", "--key-file", os.path.join(base, "key_SYNTHETIC.csv")])
