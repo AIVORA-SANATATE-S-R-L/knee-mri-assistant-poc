@@ -100,10 +100,11 @@ reproducibly and with traceable versions.
 | Component | Origin |
 |---|---|
 | Neural network architecture and weights (`rsna-knee-mri-model`, commit `{PINNED_COMMIT[:12]}`) | Third-party, MIT-licensed repository. Not developed by the team. |
-| Pseudonymisation and identifier check (`kneeai/deid.py`) | Developed by the team |
+| Pseudonymisation and identifier check (`kneeai/deid.py`, profile v0.2) | Developed by the team |
 | Study indexing, sequence classification and explicit series selection (`kneeai/dicom_index.py`, `kneeai/series_select.py`) | Developed by the team |
 | Safe model loading, hash verification, strict key check (`kneeai/engine.py`) | Developed by the team |
 | Run recording, reference-label comparison, reproducibility check, visual output, this report (`kneeai/cli.py`, `kneeai/report.py`, `kneeai/visualize.py`) | Developed by the team |
+| Automated regression and end-to-end tests on synthetic data (`tests/`, GitHub Actions) | Developed by the team |
 
 ## 3. Environment
 
@@ -172,7 +173,7 @@ These counts describe this small demonstration set only and are **not** performa
 - `outputs/results.csv` – all runs, all targets
 - `outputs/<case>/selection.csv` – series inventory and selection per study
 - `outputs/<case>/montage_<run>.png` – exact model input slices and scores (privacy-reviewed)
-- `outputs/environment.json`, `outputs/model_check.json`
+- `outputs/environment.json`, `outputs/model_check.json`, `outputs/run_log.txt`
 """
     out = os.path.join(outputs_dir, f"TECHNICAL_DEMONSTRATION_REPORT_{today}.md")
     with open(out, "w", encoding="utf-8") as fh:

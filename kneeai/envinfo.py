@@ -11,8 +11,11 @@ from typing import Any, Dict
 
 def _git_head(path: str) -> str:
     try:
-        return subprocess.check_output(["git", "-C", path, "rev-parse", "HEAD"], text=True,
+        head = subprocess.check_output(["git", "-C", path, "rev-parse", "HEAD"], text=True,
                                        stderr=subprocess.DEVNULL).strip()
+        dirty = subprocess.check_output(["git", "-C", path, "status", "--porcelain", "--untracked-files=no", "--", ".", ":!outputs"],
+                                        text=True, stderr=subprocess.DEVNULL).strip()
+        return head + ("-dirty (uncommitted code changes)" if dirty else "")
     except Exception:
         return "not a git checkout / git not available"
 

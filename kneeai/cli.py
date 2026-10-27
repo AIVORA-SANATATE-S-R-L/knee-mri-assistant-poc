@@ -24,7 +24,7 @@ import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "outputs")
-WORK = os.path.join(ROOT, "data", "_staged")
+WORK = None  # None = temporary folder next to the study (same disk), always removed after use
 
 RESULT_FIELDS = [
     "run_label", "run_timestamp", "case_code", "project_commit", "model_commit", "checkpoint_sha256",
@@ -35,6 +35,13 @@ RESULT_FIELDS = [
 
 def _now() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _log(line: str) -> None:
+    """Append-only execution log (no patient identifiers: only case codes)."""
+    os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, "run_log.txt"), "a", encoding="utf-8") as fh:
+        fh.write(f"{_now()}  {line}\n")
 
 
 def cmd_env(_a):
@@ -71,13 +78,30 @@ def cmd_verify(_a):
         json.dump(rec, fh, indent=2, default=str)
     print(json.dumps(rec, indent=2, default=str))
     print(f"\nMODEL CHECK: {status}")
+    _log(f"verify-model status={status} sha256={rec.get('sha256', '')}")
     if status != "PASSED":
         sys.exit(1)
 
 
+def _get_salt(a) -> str:
+    """Secret salt: from --salt (tests only), env KNEEAI_SALT, or typed in hidden.
+    Typing it keeps it out of the PowerShell history."""
+    if a.salt:
+        return a.salt
+    if os.environ.get("KNEEAI_SALT"):
+        return os.environ["KNEEAI_SALT"]
+    import getpass
+    s1 = getpass.getpass("Secret salt (kept by ELDA, >= 12 characters, same for every case): ")
+    if not os.path.exists(a.key_file):
+        s2 = getpass.getpass("Repeat secret salt: ")
+        if s1 != s2:
+            sys.exit("Salts do not match.")
+    return s1
+
+
 def cmd_deid(a):
     from .deid import find_identifiers, pseudonymise_study
-    counts = pseudonymise_study(a.input, a.output, a.case, a.salt, a.key_file)
+    counts = pseudonymise_study(a.input, a.output, a.case, _get_salt(a), a.key_file)
     print(f"Pseudonymised {a.case}: {counts}")
     left = find_identifiers(os.path.join(a.output, a.case))
     if left:
@@ -85,7 +109,7 @@ def cmd_deid(a):
         for f, tag, s in left[:30]:
             print("  ", f, tag, s)
     else:
-        print("Header check: no listed identifiers, dates or private tags remain.")
+        print("Header check (incl. nested sequences): no names, dates, free text, identifiers or private tags remain.")
     print("REMINDER: open the images and check visually for burned-in names/text before transfer.")
 
 
@@ -96,7 +120,7 @@ def cmd_inspect(a):
     out_dir = os.path.join(OUT, case)
     os.makedirs(out_dir, exist_ok=True)
     left = find_identifiers(a.study)
-    staged, meta, table, chosen, errors = stage_study(a.study, case, WORK)
+    staged, meta, table, chosen, errors = stage_study(a.study, case, WORK, copy_files=False)
     table.to_csv(os.path.join(out_dir, "selection.csv"), index=False)
     import pandas as pd
     with pd.option_context("display.width", 200, "display.max_columns", 20):
@@ -110,7 +134,6 @@ def cmd_inspect(a):
         print("IDENTIFIER CHECK: no listed identifiers found in headers.")
     for e in errors:
         print("ERROR:", e)
-    shutil.rmtree(staged, ignore_errors=True)
 
 
 def _load_reference(path):
@@ -150,6 +173,13 @@ def cmd_run(a):
     row_base = {"run_label": run_label, "run_timestamp": _now(), "case_code": case,
                 "project_commit": _git_head(ROOT), "model_commit": PINNED_COMMIT}
     rows = []
+    staged = None
+    res_path = os.path.join(OUT, "results.csv")
+    if os.path.exists(res_path):
+        import pandas as pd
+        prev = pd.read_csv(res_path, usecols=["run_label", "case_code"], dtype=str)
+        if ((prev["run_label"] == run_label) & (prev["case_code"] == case)).any():
+            sys.exit(f"Run label '{run_label}' already used for {case}; choose another (e.g. run3).")
     try:
         if not a.allow_identifiers:
             left = find_identifiers(a.study)
@@ -181,7 +211,6 @@ def cmd_run(a):
                          "threshold": res["thresholds"][t], "predicted_label": pred, "radiologist_reference": ref,
                          "agreement": _agreement(pred, ref), "inference_seconds": res["inference_seconds"],
                          "total_seconds": round(time.time() - t_start, 2), "error": ""})
-        shutil.rmtree(staged, ignore_errors=True)
         print(f"{case} [{run_label}] OK in {time.time() - t_start:.1f}s")
         for r in rows:
             print(f"  {r['target']:<17} score={r['score']:.4f} thr={r['threshold']:.2f} pred={r['predicted_label']} "
@@ -195,7 +224,11 @@ def cmd_run(a):
         print(f"{case} [{run_label}] FAILED: {msg}")
         with open(os.path.join(out_dir, f"error_{run_label}.log"), "w", encoding="utf-8") as fh:
             fh.write(traceback.format_exc())
-    res_path = os.path.join(OUT, "results.csv")
+    finally:
+        if staged:
+            shutil.rmtree(os.path.dirname(staged), ignore_errors=True)  # never leave copies of studies behind
+    _log(f"run case={case} label={run_label} commit={row_base['project_commit']} "
+         f"status={'FAILED ' + rows[-1]['error'] if rows and rows[-1]['error'] else 'OK'}")
     new = not os.path.exists(res_path)
     with open(res_path, "a", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=RESULT_FIELDS)
@@ -225,7 +258,7 @@ def main(argv=None):
     d.add_argument("--input", required=True, help="folder with the original exported study")
     d.add_argument("--output", required=True, help="root folder for pseudonymised studies")
     d.add_argument("--case", required=True, help="case code, e.g. ELDA-K001")
-    d.add_argument("--salt", required=True, help="secret string kept at ELDA (>= 12 chars)")
+    d.add_argument("--salt", help=argparse.SUPPRESS)  # tests only; normally typed in hidden or KNEEAI_SALT
     d.add_argument("--key-file", required=True, help="CSV mapping case code -> original UID (stays at ELDA)")
     d.set_defaults(func=cmd_deid)
 

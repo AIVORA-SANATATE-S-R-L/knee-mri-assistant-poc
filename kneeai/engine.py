@@ -77,6 +77,10 @@ class SafeKneeEngine:
         mcfg = self.config.get("model", {})
 
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        torch.manual_seed(0)
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        if torch.backends.cudnn.is_available():
+            torch.backends.cudnn.benchmark = False
         Model, self._build = _vendor()
         self.model = Model(
             encoder_name=mcfg.get("encoder_name", "resnet18"),
@@ -137,6 +141,14 @@ class SafeKneeEngine:
             p_min=self.data_cfg.get("p_min", 1.0),
             p_max=self.data_cfg.get("p_max", 99.0),
         )
+        # Guard against the upstream loader's silent fallback to black slices
+        imgs, mask = inputs["images"][0], inputs["series_mask"][0]
+        for si in range(imgs.shape[0]):
+            if mask[si] > 0:
+                blank = int((imgs[si].flatten(1).std(dim=1) == 0).sum())
+                if blank:
+                    raise RuntimeError(f"series slot {si + 1}: {blank} of {imgs.shape[1]} sampled slices are blank "
+                                       "(undecodable or empty images); refusing to infer on incomplete input")
         t0 = time.time()
         probs = self._forward(inputs["images"], inputs["metadata"], inputs["series_mask"])
         elapsed = time.time() - t0
