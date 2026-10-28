@@ -138,7 +138,7 @@ def pseudonymise_study(src_dir: str, out_root: str, case_code: str, salt: str, k
     stays with the data provider.
     """
     if not salt or len(salt) < 12:
-        raise ValueError("Use a secret salt of at least 12 characters and keep it at ELDA.")
+        raise ValueError("Use a secret phrase (salt) of at least 12 characters and keep it with the data provider.")
     out_dir = os.path.join(out_root, case_code)
     if os.path.exists(out_dir) and os.listdir(out_dir):
         raise FileExistsError(f"Output folder already exists and is not empty: {out_dir}")

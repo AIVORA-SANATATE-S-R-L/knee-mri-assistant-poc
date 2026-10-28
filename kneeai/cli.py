@@ -4,6 +4,8 @@ Commands, in the order you normally use them:
   env           record software/hardware environment     -> outputs/environment.json
   verify-model  hash + safe load + dummy forward pass      -> outputs/model_check.json
   smoke-test    full pipeline on synthetic DICOMs (no patient data)
+  find-studies  list knee MR studies in a large mixed archive -> local CSV (names stay there)
+  extract-study copy one study's original files out of the archive
   deid          pseudonymise one study (run at ELDA)
   inspect       list series, identifiers left, selection   -> outputs/<case>/selection.csv
   run           run the model on one pseudonymised study   -> outputs/results.csv (+ json, png)
@@ -91,12 +93,17 @@ def _get_salt(a) -> str:
     if os.environ.get("KNEEAI_SALT"):
         return os.environ["KNEEAI_SALT"]
     import getpass
-    s1 = getpass.getpass("Secret salt (kept by ELDA, >= 12 characters, same for every case): ")
-    if not os.path.exists(a.key_file):
-        s2 = getpass.getpass("Repeat secret salt: ")
-        if s1 != s2:
-            sys.exit("Salts do not match.")
-    return s1
+    for _attempt in range(3):
+        s1 = getpass.getpass("Secret phrase (at least 12 characters, same for every case; typing is hidden): ")
+        if len(s1) < 12:
+            print(f"  Too short ({len(s1)} characters). Use at least 12, e.g. a short sentence.")
+            continue
+        if not os.path.exists(a.key_file):
+            if getpass.getpass("Repeat secret phrase: ") != s1:
+                print("  The two entries do not match. Try again.")
+                continue
+        return s1
+    sys.exit("No valid secret phrase entered. Nothing was changed.")
 
 
 def cmd_deid(a):
@@ -127,7 +134,7 @@ def cmd_inspect(a):
         print(table.drop(columns=["series_uid"]).to_string(index=False))
     print(f"\nSelected {len(chosen)} series for the model.")
     if left:
-        print(f"\nIDENTIFIER CHECK: {len(left)} findings, the study is NOT pseudonymised. Do not process it outside ELDA.")
+        print(f"\nIDENTIFIER CHECK: {len(left)} findings, the study is NOT pseudonymised. Do not process it outside the data provider's control.")
         for f, tag, s in left[:15]:
             print("  ", tag, s, "-", os.path.relpath(f, a.study))
     else:
@@ -185,7 +192,7 @@ def cmd_run(a):
             left = find_identifiers(a.study)
             if left:
                 raise RuntimeError(f"study still contains identifiers ({len(left)} findings, e.g. {left[0][1]}); "
-                                   "pseudonymise it at ELDA first (python -m kneeai deid)")
+                                   "pseudonymise it first (python -m kneeai deid)")
         engine = SafeKneeEngine()
         staged, meta, table, chosen, errors = stage_study(a.study, case, WORK)
         table.to_csv(os.path.join(out_dir, "selection.csv"), index=False)
@@ -237,6 +244,23 @@ def cmd_run(a):
         w.writerows(rows)
 
 
+def cmd_find(a):
+    from .archive import find_studies
+    rows = find_studies(a.archive, a.index, knee_only=not a.all_studies)
+    print(f"\n{'no':>4}  {'date':8}  {'time':6}  {'series':>6}  {'images':>6}  description")
+    for r in rows:
+        print(f"{r['study_no']:>4}  {r['date']:8}  {r['time']:6}  {r['n_series']:>6}  {r['n_images']:>6}  {r['description']}")
+    print(f"\nFull list (with patient names, for choosing cases) saved locally: {a.index}")
+    print("Keep that file outside the repository and outside Google Drive/OneDrive.")
+
+
+def cmd_extract(a):
+    from .archive import extract_study
+    n = extract_study(a.index, a.study, a.out)
+    print(f"Copied {n} original files of study {a.study} to {a.out}")
+    print("Next: python -m kneeai deid --input <that folder> ...")
+
+
 def cmd_report(_a):
     from .report import build_report
     print("Report written:", build_report(OUT))
@@ -254,13 +278,25 @@ def main(argv=None):
     sub.add_parser("verify-model").set_defaults(func=cmd_verify)
     sub.add_parser("smoke-test").set_defaults(func=cmd_smoke)
 
-    d = sub.add_parser("deid", help="pseudonymise one study (run at ELDA)")
+    d = sub.add_parser("deid", help="pseudonymise one study (run under the data provider's authorisation)")
     d.add_argument("--input", required=True, help="folder with the original exported study")
     d.add_argument("--output", required=True, help="root folder for pseudonymised studies")
     d.add_argument("--case", required=True, help="case code, e.g. ELDA-K001")
     d.add_argument("--salt", help=argparse.SUPPRESS)  # tests only; normally typed in hidden or KNEEAI_SALT
     d.add_argument("--key-file", required=True, help="CSV mapping case code -> original UID (stays at ELDA)")
     d.set_defaults(func=cmd_deid)
+
+    f = sub.add_parser("find-studies", help="list knee MR studies in a large archive")
+    f.add_argument("--archive", required=True, help="folder with the clinic's original DICOM files (any layout)")
+    f.add_argument("--index", required=True, help="CSV to write, e.g. C:\\KneeDemo\\study_index.csv (contains names)")
+    f.add_argument("--all-studies", action="store_true", help="list every study, not only knee MR")
+    f.set_defaults(func=cmd_find)
+
+    x = sub.add_parser("extract-study", help="copy one study out of the archive")
+    x.add_argument("--index", required=True, help="the CSV written by find-studies")
+    x.add_argument("--study", required=True, type=int, help="study number from the list")
+    x.add_argument("--out", required=True, help="empty folder, e.g. C:\\KneeDemo\\raw\\K001")
+    x.set_defaults(func=cmd_extract)
 
     i = sub.add_parser("inspect", help="list series, check identifiers, show selection")
     i.add_argument("--study", required=True)

@@ -135,3 +135,39 @@ def test_staging_leaves_nothing_behind(raw, tmp_path):
     staged, *_ = stage_study(str(out / "R-004"), "R-004")
     shutil.rmtree(os.path.dirname(staged))
     assert set(os.listdir(out)) == before
+
+
+def test_find_and_extract_from_mixed_archive(tmp_path):
+    """A year-long archive mixes patients; one knee study must come out complete and alone."""
+    from kneeai.archive import extract_study, find_studies
+    archive = tmp_path / "archive"
+    (archive / "a").mkdir(parents=True)
+    (archive / "b").mkdir()
+    make_synthetic_study(str(archive / "a"))  # knee study 1
+    make_synthetic_study(str(archive / "b"))  # knee study 2 (different patient / UIDs)
+
+    def mark(ds, _f):
+        ds.StudyDescription = "DIAGNOSI^KNEE"
+        ds.PatientName = "OTHER^PATIENT"
+
+    _edit_all(str(archive / "b"), mark)
+    # a non-knee study must not be listed
+    brain = archive / "c"
+    brain.mkdir()
+    make_synthetic_study(str(brain))
+
+    def not_knee(ds, _f):
+        ds.StudyDescription = "BRAIN"
+        ds.SeriesDescription = "t2_tra"
+
+    _edit_all(str(brain), not_knee)
+    _edit_all(str(archive / "a"), lambda ds, f: setattr(ds, "StudyDescription", "MR GENUNCHI"))
+
+    index = str(tmp_path / "index.csv")
+    rows = find_studies(str(archive), index, progress_every=0)
+    assert len(rows) == 2 and all(r["n_images"] == 75 and r["n_series"] == 4 for r in rows)
+    out = tmp_path / "K001"
+    assert extract_study(index, 2, str(out)) == 75
+    uids = {str(pydicom.dcmread(str(p), stop_before_pixels=True).StudyInstanceUID) for p in out.iterdir()}
+    assert uids == {rows[1]["study_uid"]}
+    assert len([s for s in index_study(str(out)).values() if s.n_files >= 8]) == 3
